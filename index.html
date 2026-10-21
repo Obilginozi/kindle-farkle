@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Farkle</title>
+  <style>
+    :root { color-scheme: only light; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body {
+      margin: 0;
+      background: #fff;
+      color: #000;
+      font-family: system-ui, sans-serif;
+      font-size: 18px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body { min-height: 100vh; min-height: 100dvh; }
+    button, input { touch-action: manipulation; font: inherit; color: #000; }
+    button {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 8px 12px;
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 0;
+      font-weight: 700;
+      user-select: none;
+    }
+    button.primary { background: #000; color: #fff; }
+    button:disabled { background: #fff; color: #555; border-color: #555; }
+    button:active:not(:disabled) { background: #000; color: #fff; }
+    button.primary:active:not(:disabled) { background: #fff; color: #000; }
+    input {
+      width: 100%;
+      min-height: 48px;
+      padding: 8px 12px;
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 0;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 1.8rem; line-height: 1.1; }
+    h2 { font-size: 1.4rem; }
+    .screen { display: none; min-height: 100vh; min-height: 100dvh; padding: 12px; gap: 10px; }
+    .screen.active { display: flex; flex-direction: column; }
+    #screen-home.active, #screen-names.active, #screen-rules.active { overflow: auto; }
+    #screen-play.active {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .top button, .choices button { width: auto; }
+    .choices { display: flex; gap: 8px; }
+    .choices.wide { width: 100%; }
+    .choices.wide button { flex: 1; }
+    .choices button[aria-pressed="true"] { background: #000; color: #fff; }
+    .label { font-weight: 700; }
+    .status { font-weight: 700; min-height: 1.3em; }
+    .name-field { display: flex; flex-direction: column; gap: 4px; font-weight: 700; }
+    #name-form { display: flex; flex-direction: column; gap: 10px; }
+    #rules-body { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; }
+    #rules-body p { font-weight: 700; }
+    .rule-row, .score-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border: 3px solid #000;
+      padding: 4px 8px;
+      font-weight: 700;
+    }
+    .score-row span:first-child, .rule-row span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .score-row span:last-child, .rule-row span:last-child { flex: none; }
+    .score-row.current { background: #000; color: #fff; }
+    #scores { display: flex; flex-direction: column; gap: 4px; }
+    .panel {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .panel.center { justify-content: center; }
+    .banner { font-weight: 800; font-size: 2rem; text-align: center; }
+    #turn-line { font-size: 1.7rem; font-weight: 800; text-align: center; }
+    #aside-line, #hint, #final-flag { font-weight: 700; text-align: center; }
+    #handoff-title, #over-title { font-size: 2rem; font-weight: 800; text-align: center; overflow-wrap: anywhere; }
+    #over-detail, #farkle-detail { font-weight: 700; text-align: center; }
+    .dice {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+    .die {
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      aspect-ratio: 1;
+      min-height: 48px;
+      justify-self: center;
+      align-self: center;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .die[aria-pressed="true"] { background: #000; color: #fff; }
+    .die svg { width: 68%; height: 68%; }
+    .die circle { fill: transparent; }
+    .die[data-face="1"] .c,
+    .die[data-face="2"] .tl, .die[data-face="2"] .br,
+    .die[data-face="3"] .tl, .die[data-face="3"] .c, .die[data-face="3"] .br,
+    .die[data-face="4"] .tl, .die[data-face="4"] .tr, .die[data-face="4"] .bl, .die[data-face="4"] .br,
+    .die[data-face="5"] .tl, .die[data-face="5"] .tr, .die[data-face="5"] .c, .die[data-face="5"] .bl, .die[data-face="5"] .br,
+    .die[data-face="6"] .tl, .die[data-face="6"] .tr, .die[data-face="6"] .ml, .die[data-face="6"] .mr, .die[data-face="6"] .bl, .die[data-face="6"] .br {
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+  <noscript><p>Farkle için JavaScript açık olmalıdır. JavaScript must stay on.</p></noscript>
+
+  <main id="screen-home" class="screen active">
+    <header class="top">
+      <h1>Farkle</h1>
+      <div class="choices" id="lang-choices">
+        <button type="button" data-lang="tr">TR</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </header>
+    <p id="net-status" class="status"></p>
+    <p id="action-status" class="status" hidden></p>
+    <button type="button" id="continue" class="primary" hidden></button>
+    <p id="count-label" class="label"></p>
+    <div class="choices wide" id="count-choices">
+      <button type="button" data-count="1">1</button>
+      <button type="button" data-count="2">2</button>
+      <button type="button" data-count="3">3</button>
+      <button type="button" data-count="4">4</button>
+    </div>
+    <p id="scoring-label" class="label"></p>
+    <div class="choices wide" id="rules-choices">
+      <button type="button" data-rules="official"></button>
+      <button type="button" data-rules="classic"></button>
+    </div>
+    <button type="button" id="new-game" class="primary"></button>
+    <button type="button" id="open-rules"></button>
+    <button type="button" id="update-app"></button>
+    <p id="solo-best" class="label" hidden></p>
+  </main>
+
+  <main id="screen-names" class="screen">
+    <form id="name-form">
+      <h2 id="names-title"></h2>
+      <label class="name-field"><span></span><input maxlength="16" autocomplete="off" autocapitalize="words"></label>
+      <label class="name-field"><span></span><input maxlength="16" autocomplete="off" autocapitalize="words"></label>
+      <label class="name-field"><span></span><input maxlength="16" autocomplete="off" autocapitalize="words"></label>
+      <label class="name-field"><span></span><input maxlength="16" autocomplete="off" autocapitalize="words"></label>
+      <button type="submit" id="start" class="primary"></button>
+      <button type="button" id="names-back"></button>
+    </form>
+  </main>
+
+  <main id="screen-rules" class="screen">
+    <header class="top">
+      <h2 id="rules-title"></h2>
+      <button type="button" id="rules-back"></button>
+    </header>
+    <div id="rules-body"></div>
+  </main>
+
+  <main id="screen-play" class="screen">
+    <header class="top">
+      <h1>Farkle</h1>
+      <button type="button" id="play-home"></button>
+    </header>
+    <p id="final-flag" hidden></p>
+    <div id="scores"></div>
+    <section id="panel-handoff" class="panel center" hidden>
+      <p id="handoff-title"></p>
+      <button type="button" id="begin" class="primary"></button>
+    </section>
+    <section id="panel-table" class="panel" hidden>
+      <p id="turn-line"></p>
+      <p id="aside-line" hidden></p>
+      <div id="dice" class="dice"></div>
+      <p id="hint"></p>
+      <button type="button" id="best"></button>
+      <button type="button" id="roll" class="primary"></button>
+      <button type="button" id="bank"></button>
+    </section>
+    <section id="panel-farkle" class="panel center" hidden>
+      <p class="banner">Farkle</p>
+      <p id="farkle-detail"></p>
+      <button type="button" id="farkle-ok" class="primary"></button>
+    </section>
+    <section id="panel-over" class="panel center" hidden>
+      <p id="over-title"></p>
+      <p id="over-detail"></p>
+      <button type="button" id="over-home" class="primary"></button>
+    </section>
+  </main>
+
+  <script src="farkle.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+    (function () {
+      var F = window.Farkle;
+      var I = window.FarkleI18n;
+      var SAVE_KEY = "farkle-save";
+      var LANG_KEY = "farkle-lang";
+      var STATS_KEY = "farkle-stats";
+      var SETUP_KEY = "farkle-setup";
+      var CACHE = "farkle-v1";
+
+      var lang = storageGet(LANG_KEY) === "en" ? "en" : "tr";
+      var setup = { count: 1, rules: "official" };
+      var state = null;
+      var statusKey = "downloading";
+      var actionKey = "";
+      var updating = false;
+
+      var savedSetup = storageGet(SETUP_KEY);
+      if (savedSetup) {
+        try {
+          var parsedSetup = JSON.parse(savedSetup);
+          if (parsedSetup.count >= 1 && parsedSetup.count <= 4) setup.count = parsedSetup.count | 0;
+          if (parsedSetup.rules === "classic" || parsedSetup.rules === "official") setup.rules = parsedSetup.rules;
+        } catch (error) {}
+      }
+
+      var nameFields = Array.prototype.slice.call(document.querySelectorAll(".name-field"));
+      var nameInputs = nameFields.map(function (field) { return field.querySelector("input"); });
+      var scoreRows = [];
+      var diceButtons = [];
+      var scoresEl = document.getElementById("scores");
+      var diceEl = document.getElementById("dice");
+
+      for (var s = 0; s < 4; s++) {
+        var row = document.createElement("div");
+        row.className = "score-row";
+        var nameCell = document.createElement("span");
+        var scoreCell = document.createElement("span");
+        row.appendChild(nameCell);
+        row.appendChild(scoreCell);
+        scoresEl.appendChild(row);
+        scoreRows.push({ row: row, name: nameCell, score: scoreCell });
+      }
+
+      for (var d = 0; d < 6; d++) {
+        var die = makeDie();
+        die.dataset.index = String(d);
+        diceEl.appendChild(die);
+        diceButtons.push(die);
+      }
+
+      document.getElementById("lang-choices").addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+        setLang(button.dataset.lang);
+      });
+      document.getElementById("count-choices").addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+        setup.count = Number(button.dataset.count);
+        saveSetup();
+        renderChoices();
+      });
+      document.getElementById("rules-choices").addEventListener("click", function (event) {
+        var button = event.target.closest("button");
+        if (!button) return;
+        setup.rules = button.dataset.rules === "classic" ? "classic" : "official";
+        saveSetup();
+        renderChoices();
+      });
+      document.getElementById("continue").addEventListener("click", continueGame);
+      document.getElementById("new-game").addEventListener("click", openNames);
+      document.getElementById("open-rules").addEventListener("click", function () {
+        renderRules();
+        show("screen-rules");
+      });
+      document.getElementById("update-app").addEventListener("click", updateApp);
+      document.getElementById("name-form").addEventListener("submit", startGame);
+      document.getElementById("names-back").addEventListener("click", goHome);
+      document.getElementById("rules-back").addEventListener("click", goHome);
+      document.getElementById("play-home").addEventListener("click", goHome);
+      document.getElementById("over-home").addEventListener("click", goHome);
+      document.getElementById("begin").addEventListener("click", function () {
+        if (!state || !F.beginTurn(state)) return;
+        persist();
+        renderPlay();
+      });
+      document.getElementById("best").addEventListener("click", function () {
+        if (!state || !F.selectBest(state)) return;
+        persist();
+        renderPlay();
+      });
+      document.getElementById("roll").addEventListener("click", function () {
+        if (!state || !F.canRoll(state)) return;
+        F.roll(state);
+        persist();
+        renderPlay();
+      });
+      document.getElementById("bank").addEventListener("click", function () {
+        if (!state || !F.bank(state)) return;
+        recordSolo();
+        persist();
+        renderPlay();
+      });
+      document.getElementById("farkle-ok").addEventListener("click", function () {
+        if (!state || !F.acknowledgeFarkle(state)) return;
+        persist();
+        renderPlay();
+      });
+      diceEl.addEventListener("click", function (event) {
+        var button = event.target.closest(".die");
+        if (!button || button.hidden || !state) return;
+        if (!F.toggleDie(state, Number(button.dataset.index))) return;
+        persist();
+        renderPlay();
+      });
+
+      applyStatic();
+      renderHome();
+      registerOffline();
+
+      function t(key, vars) { return I.translate(lang, key, vars); }
+      function num(value) { return I.formatNumber(lang, value); }
+
+      function storageGet(key) {
+        try { return localStorage.getItem(key); } catch (error) { return null; }
+      }
+      function storageSet(key, value) {
+        try { localStorage.setItem(key, value); } catch (error) {}
+      }
+      function saveSetup() {
+        storageSet(SETUP_KEY, JSON.stringify(setup));
+      }
+      function blurField() {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      }
+      function defaultName(index) {
+        return t("player") + " " + (index + 1);
+      }
+      function isDefaultName(value) {
+        return /^Oyuncu [1-4]$/.test(value) || /^Player [1-4]$/.test(value);
+      }
+      function cleanName(raw, index) {
+        var name = String(raw || "").replace(/\s+/g, " ").trim().slice(0, 16);
+        return name || defaultName(index);
+      }
+      function show(id) {
+        var screens = document.querySelectorAll(".screen");
+        for (var i = 0; i < screens.length; i++) {
+          screens[i].classList.toggle("active", screens[i].id === id);
+        }
+      }
+      function setStatus(key) {
+        statusKey = key || "";
+        var el = document.getElementById("net-status");
+        el.textContent = statusKey ? t(statusKey) : "";
+      }
+      function setAction(key) {
+        actionKey = key || "";
+        var el = document.getElementById("action-status");
+        el.hidden = !actionKey;
+        el.textContent = actionKey ? t(actionKey) : "";
+      }
+      function readSave() {
+        var raw = storageGet(SAVE_KEY);
+        if (!raw) return null;
+        try {
+          var data = JSON.parse(raw);
+          if (!data || data.v !== 1 || !data.state || !data.state.players || !data.state.players.length) return null;
+          return data.state;
+        } catch (error) {
+          return null;
+        }
+      }
+      function persist() {
+        if (!state) return;
+        storageSet(SAVE_KEY, JSON.stringify({ v: 1, state: state }));
+      }
+      function readStats() {
+        var raw = storageGet(STATS_KEY);
+        if (!raw) return { soloBestTurns: null };
+        try {
+          var data = JSON.parse(raw);
+          if (!data || (data.soloBestTurns != null && typeof data.soloBestTurns !== "number")) {
+            return { soloBestTurns: null };
+          }
+          return { soloBestTurns: data.soloBestTurns };
+        } catch (error) {
+          return { soloBestTurns: null };
+        }
+      }
+      function recordSolo() {
+        if (!state || !state.over || state.players.length !== 1 || !state.result || state.result.type !== "win") return;
+        var turns = state.players[0].turns;
+        var stats = readStats();
+        if (stats.soloBestTurns == null || turns < stats.soloBestTurns) {
+          stats.soloBestTurns = turns;
+          storageSet(STATS_KEY, JSON.stringify(stats));
+        }
+      }
+      function setLang(next) {
+        if (next !== "tr" && next !== "en" || next === lang) return;
+        var namesOpen = document.getElementById("screen-names").classList.contains("active");
+        if (namesOpen) {
+          nameInputs.forEach(function (input, index) {
+            if (isDefaultName(input.value)) input.value = I.translate(next, "player") + " " + (index + 1);
+          });
+        }
+        lang = next;
+        storageSet(LANG_KEY, lang);
+        applyStatic();
+        if (namesOpen) return;
+        if (state && document.getElementById("screen-play").classList.contains("active")) renderPlay();
+        if (document.getElementById("screen-rules").classList.contains("active")) renderRules();
+        renderHome();
+      }
+      function applyStatic() {
+        document.documentElement.lang = lang;
+        text("count-label", "playerCount");
+        text("scoring-label", "scoring");
+        text("new-game", "newGame");
+        text("open-rules", "rules");
+        text("update-app", "update");
+        text("continue", "continue");
+        text("names-title", "names");
+        text("start", "start");
+        text("names-back", "back");
+        text("rules-title", "rules");
+        text("rules-back", "back");
+        text("play-home", "home");
+        text("best", "bestScore");
+        text("farkle-detail", "farkleLost");
+        text("farkle-ok", "cont");
+        text("over-home", "home");
+        var rulesButtons = document.querySelectorAll("#rules-choices button");
+        rulesButtons[0].textContent = t("official");
+        rulesButtons[1].textContent = t("classic");
+        nameFields.forEach(function (field, index) {
+          field.querySelector("span").textContent = defaultName(index);
+        });
+        setStatus(statusKey);
+        setAction(actionKey);
+        renderChoices();
+        renderHome();
+      }
+      function text(id, key) {
+        document.getElementById(id).textContent = t(key);
+      }
+      function renderChoices() {
+        var counts = document.querySelectorAll("#count-choices button");
+        for (var i = 0; i < counts.length; i++) {
+          counts[i].setAttribute("aria-pressed", Number(counts[i].dataset.count) === setup.count ? "true" : "false");
+        }
+        var rules = document.querySelectorAll("#rules-choices button");
+        for (var r = 0; r < rules.length; r++) {
+          rules[r].setAttribute("aria-pressed", rules[r].dataset.rules === setup.rules ? "true" : "false");
+        }
+        var langs = document.querySelectorAll("#lang-choices button");
+        for (var n = 0; n < langs.length; n++) {
+          langs[n].setAttribute("aria-pressed", langs[n].dataset.lang === lang ? "true" : "false");
+        }
+      }
+      function renderHome() {
+        var save = readSave();
+        document.getElementById("continue").hidden = !save;
+        var stats = readStats();
+        var best = document.getElementById("solo-best");
+        if (stats.soloBestTurns == null) best.hidden = true;
+        else {
+          best.hidden = false;
+          best.textContent = t("soloBest", { count: stats.soloBestTurns });
+        }
+      }
+      function openNames() {
+        nameFields.forEach(function (field, index) {
+          field.hidden = index >= setup.count;
+          nameInputs[index].value = defaultName(index);
+        });
+        show("screen-names");
+        if (nameInputs[0]) nameInputs[0].focus();
+      }
+      function startGame(event) {
+        event.preventDefault();
+        var names = [];
+        for (var i = 0; i < setup.count; i++) names.push(cleanName(nameInputs[i].value, i));
+        blurField();
+        state = F.createGame({ names: names, rules: setup.rules });
+        persist();
+        show("screen-play");
+        renderPlay();
+      }
+      function continueGame() {
+        var saved = readSave();
+        if (!saved) return;
+        blurField();
+        state = saved;
+        show("screen-play");
+        renderPlay();
+      }
+      function goHome() {
+        blurField();
+        renderHome();
+        show("screen-home");
+      }
+      function renderRules() {
+        var body = document.getElementById("rules-body");
+        while (body.firstChild) body.removeChild(body.firstChild);
+        addParagraph(body, t("preset", { name: t(setup.rules) }));
+        addParagraph(body, t("rulesIntro"));
+        addParagraph(body, t("rulesSeparate"));
+        addParagraph(body, t("hotRule"));
+        addParagraph(body, t("farkleRule"));
+        addParagraph(body, t("openRule", { points: num(F.OPENING) }));
+        addParagraph(body, t("winRule", { goal: num(F.GOAL) }));
+        if (setup.rules === "classic") addParagraph(body, t("classicNote"));
+        var examples = [
+          [t("single1"), [1]],
+          [t("single5"), [5]],
+          [t("threeFace", { face: 1 }), [1, 1, 1]],
+          [t("threeFace", { face: 2 }), [2, 2, 2]],
+          [t("threeFace", { face: 3 }), [3, 3, 3]],
+          [t("threeFace", { face: 4 }), [4, 4, 4]],
+          [t("threeFace", { face: 5 }), [5, 5, 5]],
+          [t("threeFace", { face: 6 }), [6, 6, 6]],
+          [t("fourFace", { face: 1 }), [1, 1, 1, 1]],
+          [t("fourFace", { face: 2 }), [2, 2, 2, 2]],
+          [t("fiveFace", { face: 1 }), [1, 1, 1, 1, 1]],
+          [t("sixFace", { face: 1 }), [1, 1, 1, 1, 1, 1]],
+          [t("straight"), [1, 2, 3, 4, 5, 6]],
+          [t("threePairs"), [1, 1, 2, 2, 3, 3]],
+          [t("fourPair"), [4, 4, 4, 4, 3, 3]],
+          [t("twoTrips"), [1, 1, 1, 6, 6, 6]]
+        ];
+        for (var i = 0; i < examples.length; i++) {
+          var row = document.createElement("div");
+          row.className = "rule-row";
+          var label = document.createElement("span");
+          var points = document.createElement("span");
+          label.textContent = examples[i][0];
+          points.textContent = num(F.scoreDice(examples[i][1], setup.rules).points);
+          row.appendChild(label);
+          row.appendChild(points);
+          body.appendChild(row);
+        }
+      }
+      function addParagraph(parent, value) {
+        var p = document.createElement("p");
+        p.textContent = value;
+        parent.appendChild(p);
+      }
+      function renderPlay() {
+        if (!state) return;
+        var player = state.players[state.current];
+        var info = F.selectionInfo(state);
+        document.getElementById("final-flag").hidden = !state.finalRound;
+        document.getElementById("final-flag").textContent = t("finalRound");
+        for (var i = 0; i < scoreRows.length; i++) {
+          var entry = scoreRows[i];
+          var person = state.players[i];
+          entry.row.hidden = !person;
+          if (!person) continue;
+          entry.name.textContent = person.name;
+          entry.score.textContent = num(person.score);
+          var winning = state.over && state.result && state.result.names.indexOf(person.name) !== -1;
+          entry.row.classList.toggle("current", winning || (!state.over && i === state.current));
+        }
+        setPanel("panel-handoff", state.phase === "handoff");
+        setPanel("panel-table", state.phase === "need-roll" || state.phase === "pick");
+        setPanel("panel-farkle", state.phase === "farkle");
+        setPanel("panel-over", state.phase === "over");
+        if (state.phase === "handoff") {
+          document.getElementById("handoff-title").textContent = t("turnBanner", { name: player.name });
+          document.getElementById("begin").textContent = t("startTurn", { name: player.name });
+        }
+        if (state.phase === "need-roll" || state.phase === "pick") {
+          var pending = info.valid ? info.points : 0;
+          document.getElementById("turn-line").textContent = t("thisTurn", { points: num(state.turnPoints + pending) });
+          var aside = document.getElementById("aside-line");
+          aside.hidden = state.lockedCount <= 0;
+          aside.textContent = t("aside", { count: state.lockedCount });
+          var hint = document.getElementById("hint");
+          var hintText = playHint(info);
+          hint.hidden = !hintText;
+          hint.textContent = hintText;
+          for (var dieIndex = 0; dieIndex < diceButtons.length; dieIndex++) {
+            var button = diceButtons[dieIndex];
+            var inRoll = state.phase === "pick" && dieIndex < state.roll.length;
+            button.hidden = !inRoll;
+            if (!inRoll) continue;
+            button.dataset.face = String(state.roll[dieIndex]);
+            button.setAttribute("aria-pressed", state.selected.indexOf(dieIndex) !== -1 ? "true" : "false");
+            button.setAttribute("aria-label", String(state.roll[dieIndex]));
+          }
+          var best = document.getElementById("best");
+          best.hidden = state.phase !== "pick";
+          best.disabled = state.phase !== "pick";
+          var roll = document.getElementById("roll");
+          roll.textContent = info.valid && info.allTaken ? t("rollAll") : t("roll");
+          roll.disabled = !F.canRoll(state);
+          var bank = document.getElementById("bank");
+          bank.hidden = state.phase !== "pick";
+          var total = F.bankTotal(state);
+          bank.textContent = total > 0 ? t("bankPoints", { points: num(total) }) : t("bank");
+          bank.disabled = !F.canBank(state);
+        }
+        if (state.phase === "over" && state.result) {
+          if (state.result.type === "tie") {
+            document.getElementById("over-title").textContent = t("tie");
+            document.getElementById("over-detail").textContent = state.result.names.join(" · ") + " · " + num(state.result.score);
+          } else {
+            document.getElementById("over-title").textContent = t("wins", { name: state.result.names[0] });
+            document.getElementById("over-detail").textContent = state.players.length === 1
+              ? t("turns", { count: state.players[0].turns }) + " · " + num(state.result.score)
+              : num(state.result.score);
+          }
+        }
+      }
+      function playHint(info) {
+        if (state.phase !== "pick") return "";
+        if (state.selected.length && !info.valid) return t("invalid");
+        if (info.valid && !state.players[state.current].onBoard && F.bankTotal(state) < F.OPENING) {
+          return t("need500", { points: num(F.OPENING) });
+        }
+        if (info.valid && info.allTaken) return t("allScored");
+        if (!state.selected.length) return t("tapDice");
+        return "";
+      }
+      function setPanel(id, on) {
+        document.getElementById(id).hidden = !on;
+      }
+      function makeDie() {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "die";
+        button.hidden = true;
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 100 100");
+        svg.setAttribute("aria-hidden", "true");
+        [["tl", 28, 28], ["tr", 72, 28], ["ml", 28, 50], ["mr", 72, 50], ["bl", 28, 72], ["br", 72, 72], ["c", 50, 50]].forEach(function (spot) {
+          var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("class", spot[0]);
+          circle.setAttribute("cx", String(spot[1]));
+          circle.setAttribute("cy", String(spot[2]));
+          circle.setAttribute("r", "9");
+          svg.appendChild(circle);
+        });
+        button.appendChild(svg);
+        return button;
+      }
+      function assetUrls() {
+        var scope = new URL("./", location.href);
+        return ["", "index.html", "farkle.js", "i18n.js", "sw.js"].map(function (file) {
+          return new URL(file, scope).href;
+        });
+      }
+      function refreshCache() {
+        return Promise.all(assetUrls().map(function (asset) {
+          return fetch(asset, { cache: "reload" }).then(function (response) {
+            if (!response.ok) throw new Error("update");
+            return { url: asset, response: response };
+          });
+        })).then(function (items) {
+          return caches.open(CACHE).then(function (cache) {
+            return Promise.all(items.map(function (item) {
+              return cache.put(item.url, item.response);
+            }));
+          });
+        });
+      }
+      function updateApp() {
+        if (updating) return;
+        if (!navigator.onLine) {
+          setAction("updateOffline");
+          return;
+        }
+        updating = true;
+        document.getElementById("update-app").disabled = true;
+        setAction("updating");
+        refreshCache().then(function () {
+          if (!navigator.serviceWorker) {
+            location.reload();
+            return;
+          }
+          return navigator.serviceWorker.getRegistration().then(function (reg) {
+            if (reg) return reg.update();
+          }).then(function () {
+            location.reload();
+          });
+        }).catch(function () {
+          updating = false;
+          document.getElementById("update-app").disabled = false;
+          setAction("updateFailed");
+        });
+      }
+      function watchWorker(worker) {
+        if (!worker) return;
+        worker.addEventListener("statechange", function () {
+          if (worker.state === "activated") setStatus("readyOffline");
+          else if (worker.state === "redundant" && statusKey !== "readyOffline") setStatus("onlineOnly");
+        });
+      }
+      function registerOffline() {
+        if (!("serviceWorker" in navigator) || location.protocol.indexOf("http") !== 0) {
+          setStatus("onlineOnly");
+          return;
+        }
+        navigator.serviceWorker.register("./sw.js").then(function (reg) {
+          if (reg.active) setStatus("readyOffline");
+          else {
+            setStatus("downloading");
+            watchWorker(reg.installing || reg.waiting);
+          }
+        }).catch(function () {
+          setStatus("onlineOnly");
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
