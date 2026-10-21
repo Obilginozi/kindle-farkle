@@ -62,7 +62,12 @@
       threePairs: "Üç çift",
       fourPair: "Dört aynı ve bir çift",
       twoTrips: "İki üçlü",
-      preset: "Seçili düzen: {name}"
+      preset: "Seçili düzen: {name}",
+      miniScores: "Puanlar",
+      miniStraight: "1–6",
+      miniPairs: "3 çift",
+      miniFull: "4+2",
+      miniTrips: "2 üçlü"
     },
     en: {
       downloading: "Downloading…",
@@ -122,7 +127,12 @@
       threePairs: "Three pairs",
       fourPair: "Four of a kind and a pair",
       twoTrips: "Two triplets",
-      preset: "Selected rules: {name}"
+      preset: "Selected rules: {name}",
+      miniScores: "Scores",
+      miniStraight: "1–6",
+      miniPairs: "3 pairs",
+      miniFull: "4+2",
+      miniTrips: "2 trips"
     }
   };
 

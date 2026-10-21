@@ -87,6 +87,29 @@
     .score-row span:last-child, .rule-row span:last-child { flex: none; }
     .score-row.current { background: #000; color: #fff; }
     #scores { display: flex; flex-direction: column; gap: 4px; }
+    #mini-scores {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0 8px;
+      flex: none;
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+    .mini-cell {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      min-width: 0;
+      border-bottom: 1px solid #000;
+    }
+    .mini-cell span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .mini-cell span:last-child { flex: none; }
     .panel {
       display: flex;
       flex: 1;
@@ -198,6 +221,7 @@
       <button type="button" id="begin" class="primary"></button>
     </section>
     <section id="panel-table" class="panel" hidden>
+      <div id="mini-scores"></div>
       <p id="turn-line"></p>
       <p id="aside-line" hidden></p>
       <div id="dice" class="dice"></div>
@@ -236,6 +260,7 @@
       var statusKey = "downloading";
       var actionKey = "";
       var updating = false;
+      var miniKey = "";
 
       var savedSetup = storageGet(SETUP_KEY);
       if (savedSetup) {
@@ -570,6 +595,57 @@
         p.textContent = value;
         parent.appendChild(p);
       }
+      function repeatFace(face, count) {
+        var label = "";
+        var dice = [];
+        for (var i = 0; i < count; i++) {
+          label += String(face);
+          dice.push(face);
+        }
+        return { label: label, dice: dice };
+      }
+      function renderMini() {
+        var key = lang + ":" + state.rules;
+        if (key === miniKey) return;
+        miniKey = key;
+        var root = document.getElementById("mini-scores");
+        root.setAttribute("aria-label", t("miniScores"));
+        while (root.firstChild) root.removeChild(root.firstChild);
+        var cells = [
+          { label: "1", dice: [1] },
+          { label: "5", dice: [5] },
+          repeatFace(1, 3),
+          repeatFace(2, 3),
+          repeatFace(3, 3),
+          repeatFace(4, 3),
+          repeatFace(5, 3),
+          repeatFace(6, 3)
+        ];
+        if (state.rules === "classic") {
+          cells.push(repeatFace(1, 4));
+          cells.push(repeatFace(2, 4));
+          cells.push(repeatFace(1, 6));
+        } else {
+          cells.push({ label: "×4", dice: [4, 4, 4, 4] });
+          cells.push({ label: "×5", dice: [5, 5, 5, 5, 5] });
+          cells.push({ label: "×6", dice: [6, 6, 6, 6, 6, 6] });
+        }
+        cells.push({ label: t("miniStraight"), dice: [1, 2, 3, 4, 5, 6] });
+        cells.push({ label: t("miniPairs"), dice: [1, 1, 2, 2, 3, 3] });
+        cells.push({ label: t("miniFull"), dice: [4, 4, 4, 4, 3, 3] });
+        cells.push({ label: t("miniTrips"), dice: [1, 1, 1, 6, 6, 6] });
+        for (var i = 0; i < cells.length; i++) {
+          var cell = document.createElement("div");
+          cell.className = "mini-cell";
+          var name = document.createElement("span");
+          var points = document.createElement("span");
+          name.textContent = cells[i].label;
+          points.textContent = num(F.scoreDice(cells[i].dice, state.rules).points);
+          cell.appendChild(name);
+          cell.appendChild(points);
+          root.appendChild(cell);
+        }
+      }
       function renderPlay() {
         if (!state) return;
         var player = state.players[state.current];
@@ -595,6 +671,7 @@
           document.getElementById("begin").textContent = t("startTurn", { name: player.name });
         }
         if (state.phase === "need-roll" || state.phase === "pick") {
+          renderMini();
           var pending = info.valid ? info.points : 0;
           document.getElementById("turn-line").textContent = t("thisTurn", { points: num(state.turnPoints + pending) });
           var aside = document.getElementById("aside-line");
