@@ -91,26 +91,26 @@
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       grid-template-rows: repeat(3, auto);
-      gap: 1px 4px;
+      gap: 0 8px;
       flex: none;
       font-size: 12px;
-      line-height: 1.15;
+      line-height: 1.25;
       font-weight: 700;
-      text-align: center;
     }
     .mini-cell {
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
       min-width: 0;
       border-bottom: 1px solid #000;
     }
-    .mini-cell span {
-      max-width: 100%;
+    .mini-cell span:first-child {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
     }
+    .mini-cell span:last-child { flex: none; }
     .panel {
       display: flex;
       flex: 1;
