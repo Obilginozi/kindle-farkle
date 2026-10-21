@@ -89,27 +89,28 @@
     #scores { display: flex; flex-direction: column; gap: 4px; }
     #mini-scores {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0 8px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-rows: repeat(3, auto);
+      gap: 1px 4px;
       flex: none;
       font-size: 12px;
-      line-height: 1.25;
+      line-height: 1.15;
       font-weight: 700;
+      text-align: center;
     }
     .mini-cell {
       display: flex;
-      justify-content: space-between;
-      gap: 4px;
+      flex-direction: column;
+      align-items: center;
       min-width: 0;
       border-bottom: 1px solid #000;
     }
-    .mini-cell span:first-child {
+    .mini-cell span {
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      min-width: 0;
     }
-    .mini-cell span:last-child { flex: none; }
     .panel {
       display: flex;
       flex: 1;
